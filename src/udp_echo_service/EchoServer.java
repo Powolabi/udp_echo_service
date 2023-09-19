@@ -1,28 +1,49 @@
 package udp_echo_service;
 
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
+import java.net.*;
+import java.time.LocalDateTime;
+import java.util.Arrays;
 
 public class EchoServer {
     public static void main(String[] args) {
-        DatagramSocket serverSocket = new DatagramSocket(port:3000);
-        DatagramPacket clientRequest = new DatagramPacket(new byte[1024], length:1024);
-        serverSocket.recieve(clientRequest);
-        byte[] content = clientRequest.getData();
-        System.out.println(new String(content));
+        DatagramSocket serverSocket = null;
 
+        try {
+            serverSocket = new DatagramSocket(3000);
 
-        InetAddress clientIP = clientRequest.getAddress();
-        DatagramPacket serverReply = new DatagramPacket(content, content.length, clientIP, clientPort);
-        serverSocket.send(serverReply);
-        serverSocket.close();
+            while (true) {
+                DatagramPacket clientRequest = new DatagramPacket(new byte[1024], 1024);
+                serverSocket.receive(clientRequest);
+                byte[] content = Arrays.copyOf(clientRequest.getData(), clientRequest.getLength());
+                String request = new String(content).trim(); // Convert the received data to a string and trim it
 
-    }catch(socketException e){
-        e.printStackTrace();
+                InetAddress clientIP = clientRequest.getAddress();
+                int clientPort = clientRequest.getPort();
 
-    }catch(IOException e){
-        e.printStackTrace();
+                String response = processRequest(request);
+                byte[] responseData = response.getBytes();
+
+                DatagramPacket serverReply = new DatagramPacket(responseData, responseData.length, clientIP, clientPort);
+                serverSocket.send(serverReply);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
+        }
+    }
+
+    private static String processRequest(String request) {
+        if (request.equalsIgnoreCase("date")) {
+            LocalDateTime now = LocalDateTime.now();
+            return now.toLocalDate().toString();
+        } else if (request.equalsIgnoreCase("time")) {
+            LocalDateTime now = LocalDateTime.now();
+            return now.toLocalTime().toString();
+        } else {
+            return "invalid request";
+        }
     }
 }
